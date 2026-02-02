@@ -1,1 +1,105 @@
+groups:
+  - name: ml_model_alerts
+    interval: 30s
+    rules:
+      # High latency alert
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(model_inference_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: ml-backend
+        annotations:
+          summary: "High inference latency detected"
+          description: "95th percentile latency is {{ $value }}s (threshold: 0.5s)"
 
+      # Model accuracy degradation
+      - alert: ModelAccuracyDegraded
+        expr: model_accuracy < 0.75
+        for: 10m
+        labels:
+          severity: critical
+          component: ml-model
+        annotations:
+          summary: "Model accuracy below threshold"
+          description: "Current accuracy is {{ $value }} (threshold: 0.75)"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(model_inference_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: ml-backend
+        annotations:
+          summary: "High error rate in model inference"
+          description: "Error rate is {{ $value }} errors/sec"
+
+      # Data drift detected
+      - alert: DataDriftDetected
+        expr: data_drift_score > 0.3
+        for: 1h
+        labels:
+          severity: warning
+          component: ml-model
+        annotations:
+          summary: "Data drift detected"
+          description: "Drift score is {{ $value }} (threshold: 0.3)"
+
+      # Memory usage high
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes{pod=~"ml-backend.*"} / container_spec_memory_limit_bytes{pod=~"ml-backend.*"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.pod }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # CPU throttling
+      - alert: CPUThrottling
+        expr: rate(container_cpu_cfs_throttled_seconds_total{pod=~"ml-backend.*"}[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "CPU throttling on {{ $labels.pod }}"
+          description: "Pod is being CPU throttled"
+
+      # Pod restarts
+      - alert: PodRestarting
+        expr: rate(kube_pod_container_status_restarts_total{pod=~"ml-backend.*"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Pod {{ $labels.pod }} is restarting"
+          description: "Pod has restarted {{ $value }} times in the last 15 minutes"
+
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      # Node down
+      - alert: NodeDown
+        expr: up{job="kubernetes-nodes"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Node {{ $labels.instance }} is down"
+          description: "Node has been down for more than 5 minutes"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
