@@ -49,7 +49,8 @@ git clone https://github.com/lobasfs/ML-Model-Deployment-Pipeline
 cd ML-Model-Deployment-Pipeline
 pip install -r requirements.txt
 python main.py
-
+```
+```bash
 ## Infrastructure as Code (Terraform)
 
 ### Инициализация Terraform
