@@ -1,1 +1,75 @@
-
+{
+  "dashboard": {
+    "title": "ML Model Performance Dashboard",
+    "tags": ["ml", "production"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Inference Latency (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(model_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 latency"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(model_inference_requests_total[5m])",
+            "legendFormat": "requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Model Accuracy",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "model_accuracy",
+            "legendFormat": "accuracy"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(model_inference_errors_total[5m])",
+            "legendFormat": "errors/sec"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Pod CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{pod=~\"ml-backend.*\"}[5m])",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Pod Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{pod=~\"ml-backend.*\"}",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      }
+    ]
+  }
+}
