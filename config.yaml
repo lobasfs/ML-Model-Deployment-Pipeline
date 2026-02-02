@@ -1,1 +1,30 @@
+model:
+  architecture: LSTM
+  hidden_size: 64
+  num_layers: 2
+  dropout: 0.3
 
+training:
+  epochs: 20
+  batch_size: 256
+  learning_rate: 0.001
+  validation_split: 0.2
+
+deployment:
+  onnx_opset: 11
+  quantize: true
+  optimize: true
+
+data:
+  test_size: 0.2
+  random_state: 42
+
+monitoring:
+  drift_threshold: 0.1
+  accuracy_threshold: 0.75
+  check_interval_hours: 24
+
+retraining:
+  schedule: "0 2 * * 0"  # Every Sunday at 2 AM
+  trigger_on_drift: true
+  min_improvement: 0.02
