@@ -43,6 +43,11 @@ project/
 ├── requirements.txt         # Зависимости
 └── README.md               # Документация
 ```
+## Быстрый старт
+git clone https://github.com/lobasfs/ML-Model-Deployment-Pipeline
+cd ML-Model-Deployment-Pipeline
+pip install -r requirements.txt
+python main.py
 
 ## Infrastructure as Code (Terraform)
 
