@@ -1,0 +1,118 @@
+name: Scheduled Model Retraining
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      force_retrain:
+        description: 'Force retraining even if drift not detected'
+        required: false
+        default: 'false'
+
+jobs:
+  check-drift:
+    name: Check Data Drift
+    runs-on: ubuntu-latest
+    outputs:
+      should_retrain: ${{ steps.drift.outputs.drift_detected }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install evidently pandas scikit-learn
+
+      - name: Download production data
+        run: |
+          python scripts/download_prod_data.py \
+            --bucket ${{ secrets.S3_BUCKET }} \
+            --output data/production_data.csv
+
+      - name: Check for drift
+        id: drift
+        run: |
+          result=$(python scripts/check_drift.py \
+            --reference data/reference_data.csv \
+            --current data/production_data.csv \
+            --threshold 0.1)
+          echo "drift_detected=$result" >> $GITHUB_OUTPUT
+
+      - name: Upload drift report
+        uses: actions/upload-artifact@v3
+        with:
+          name: drift-report
+          path: reports/drift_report.html
+
+  retrain:
+    name: Retrain Model
+    needs: check-drift
+    if: needs.check-drift.outputs.should_retrain == 'true' || github.event.inputs.force_retrain == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Download latest data
+        run: |
+          python scripts/download_training_data.py
+
+      - name: Train model
+        run: |
+          python main.py --config config.yaml
+
+      - name: Evaluate model
+        run: |
+          python scripts/evaluate_model.py \
+            --model models/model.onnx \
+            --test-data data/test.csv \
+            --output reports/evaluation.json
+
+      - name: Compare with production model
+        id: compare
+        run: |
+          result=$(python scripts/compare_models.py \
+            --new-model models/model.onnx \
+            --prod-model models/model_production.onnx \
+            --threshold 0.02)
+          echo "better=$result" >> $GITHUB_OUTPUT
+
+      - name: Upload to model registry
+        if: steps.compare.outputs.better == 'true'
+        run: |
+          python scripts/upload_model.py \
+            --model models/model.onnx \
+            --registry ${{ secrets.MODEL_REGISTRY }}
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.better == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: 'chore: update model after retraining'
+          title: 'Update ML Model - Automated Retraining'
+          body: |
+            Automated model retraining completed successfully.
+            
+            **Metrics:**
+            - See attached evaluation report
+            - Drift detected: Yes
+            - Model improvement: ${{ steps.compare.outputs.improvement }}%
+          branch: automated-retraining-${{ github.run_number }}
