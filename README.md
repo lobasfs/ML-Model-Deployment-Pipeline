@@ -44,6 +44,7 @@ project/
 └── README.md               # Документация
 ```
 ## Быстрый старт
+```bash
 git clone https://github.com/lobasfs/ML-Model-Deployment-Pipeline
 cd ML-Model-Deployment-Pipeline
 pip install -r requirements.txt
@@ -53,7 +54,6 @@ python main.py
 
 ### Инициализация Terraform
 
-```bash
 cd infrastructure/terraform
 
 # Инициализация
