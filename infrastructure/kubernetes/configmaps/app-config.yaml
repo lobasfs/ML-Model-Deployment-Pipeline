@@ -1,1 +1,12 @@
-
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-app-config
+  namespace: ml-production
+data:
+  MODEL_PATH: "/app/models/model_quantized.onnx"
+  SCALER_PATH: "/app/models/scaler.pkl"
+  LOG_LEVEL: "info"
+  WORKERS: "4"
+  MAX_BATCH_SIZE: "128"
+  TIMEOUT_SECONDS: "30"
